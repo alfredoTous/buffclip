@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 class X11 
 {
     public const int KeyPress = 2;
+    public const int KeyRelease = 3;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct XKeyEvent
@@ -63,5 +64,17 @@ class X11
     public const int GrabModeAsync = 1;
 
     public const ulong XK_F1 = 0xffbe;
+    [DllImport("libXtst.so.6")]
+    public static extern int XTestFakeKeyEvent(
+        IntPtr display,
+        uint keycode,
+        bool is_press,
+        ulong delay);
+
+    [DllImport("libX11.so.6")]
+    public static extern int XFlush(IntPtr display);
+
+    public const ulong XK_H = 0x0068;
+    public const ulong XK_I = 0x0069;
 
 }

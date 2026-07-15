@@ -24,9 +24,20 @@ class Program
         buffers[id_buf] = content;
     }
 
-
-    static void PasteFromBuffer(string[] buffers, int id_buf)
+    static void PasteFromBuffer(IntPtr dpy)
     {
+        uint h = (uint)XKeysymToKeycode(dpy, XK_H);
+        uint i = (uint)XKeysymToKeycode(dpy, XK_I);
+
+        // H
+        XTestFakeKeyEvent(dpy, h, true, 0); // Press
+        XTestFakeKeyEvent(dpy, h, false, 0); // Release
+
+        // I
+        XTestFakeKeyEvent(dpy, i, true, 0); // Press
+        XTestFakeKeyEvent(dpy, i, false, 0); // Release
+
+        XFlush(dpy);
     }
 
     static void Main()
@@ -44,22 +55,19 @@ class Program
 
         IntPtr rootWindow = XDefaultRootWindow(dpy); // Get root window
 
-        int keycode = XKeysymToKeycode(dpy, XK_F1); // Translate from logic virtual key value to physical keycode
+        int f1_keycode = XKeysymToKeycode(dpy, XK_F1); // Translate from logic virtual key value to physical keycode
 
-        int result = XGrabKey(dpy, keycode, 0, rootWindow, true, GrabModeAsync, GrabModeAsync);
-        Console.WriteLine($"Grab result = {result}");
+        XGrabKey(dpy, f1_keycode, 0, rootWindow, true, GrabModeAsync, GrabModeAsync);
         XSync(dpy, false);
         
         Console.WriteLine("[i] Esperando F1...");
         XEvent ev;
-        
         try {
             while (true) {
                 XNextEvent(dpy, out ev);
 
-                if (ev.type == KeyPress) {
-                    Console.WriteLine("[+] F1 Presionado");
-                    CopyToBuffer(buffers, 1);
+                if (ev.type == KeyRelease && ev.xkey.keycode == f1_keycode) {
+                    PasteFromBuffer(dpy);
                 }
             }
         }
