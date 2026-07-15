@@ -1,11 +1,41 @@
 ﻿using static X11;
 
+using System.Diagnostics;
+
 class Program
 {
+
+    static void CopyToBuffer(string[] buffers, int id_buf)
+    {
+        ProcessStartInfo psi = new ProcessStartInfo("xclip", "-sel PRIMARY -o") {
+            RedirectStandardOutput = true,
+            UseShellExecute = false
+        };
+
+        using var p = Process.Start(psi);
+        if (p == null) {
+            Console.WriteLine($"[-] Error xclip failed to initialize");
+            return;
+        } 
+        string content = p.StandardOutput.ReadToEnd();
+        Console.WriteLine($"{content}");
+        p.WaitForExit();
+
+        buffers[id_buf] = content;
+    }
+
+
+    static void PasteFromBuffer(string[] buffers, int id_buf)
+    {
+    }
+
     static void Main()
     {
-        // Manage key press with X11 APIs for full key grab
+        
+        int NUMBER_OF_BUFFERS = 2;
+        string[] buffers = new string[NUMBER_OF_BUFFERS];
 
+        // Manage key press with X11 APIs for global key grab
         IntPtr dpy = XOpenDisplay(IntPtr.Zero); // Open connection to the X11 server
         if (dpy == IntPtr.Zero) {
             Console.WriteLine("[-] Error XOpenDisplay failed");
@@ -29,6 +59,7 @@ class Program
 
                 if (ev.type == KeyPress) {
                     Console.WriteLine("[+] F1 Presionado");
+                    CopyToBuffer(buffers, 1);
                 }
             }
         }
