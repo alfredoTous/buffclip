@@ -2,10 +2,18 @@
 
 using System.Diagnostics;
 
-class Program
-{
 
-    static void CopyToBuffer(string[] buffers, int id_buf)
+class Buffers
+{
+    public int NumberOfBuffers;
+    public string[] buffers;
+
+    public Buffers(int NumberOfBuffers) {
+        this.NumberOfBuffers = NumberOfBuffers;
+        buffers = new string[NumberOfBuffers];
+    }
+    
+    void CopyToBuffer(string[] buffers, int id_buf)
     {
         ProcessStartInfo psi = new ProcessStartInfo("xclip", "-sel PRIMARY -o") {
             RedirectStandardOutput = true,
@@ -21,11 +29,10 @@ class Program
         Console.WriteLine($"{content}");
         p.WaitForExit();
 
-        buffers[id_buf] = content;
+        this.buffers[id_buf] = content;
     }
 
-    static void PasteFromBuffer(IntPtr dpy)
-    {
+    public void PasteFromBuffer(IntPtr dpy) {
         uint h = (uint)XKeysymToKeycode(dpy, XK_H);
         uint i = (uint)XKeysymToKeycode(dpy, XK_I);
 
@@ -40,11 +47,21 @@ class Program
         XFlush(dpy);
     }
 
+
+
+}
+
+
+class Program
+{
+
+    
+    
     static void Main()
     {
-        
+
         int NUMBER_OF_BUFFERS = 2;
-        string[] buffers = new string[NUMBER_OF_BUFFERS];
+        Buffers buffers = new Buffers(NUMBER_OF_BUFFERS);
 
         // Manage key press with X11 APIs for global key grab
         IntPtr dpy = XOpenDisplay(IntPtr.Zero); // Open connection to the X11 server
@@ -67,7 +84,7 @@ class Program
                 XNextEvent(dpy, out ev);
 
                 if (ev.type == KeyRelease && ev.xkey.keycode == f1_keycode) {
-                    PasteFromBuffer(dpy);
+                    buffers.PasteFromBuffer(dpy);
                 }
             }
         }
