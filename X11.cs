@@ -1,9 +1,22 @@
 using System.Runtime.InteropServices;
 
+// X11 Definitions
+
 class X11 
 {
     public const int KeyPress = 2;
     public const int KeyRelease = 3;
+
+
+    public const uint LockMask = 1u << 1;   // Caps Lock
+    public const uint Mod2Mask = 1u << 4; //  Num Lock
+
+
+    public const int GrabModeAsync = 1;
+
+    public const ulong XK_H = 0x0068;
+    public const ulong XK_I = 0x0069;
+
 
     [StructLayout(LayoutKind.Sequential)]
     public struct XKeyEvent
@@ -61,7 +74,6 @@ class X11
     [DllImport("libX11.so.6")]
     public static extern int XSync(IntPtr display, bool discard);
 
-    public const int GrabModeAsync = 1;
 
     public const ulong XK_F1 = 0xffbe;
     [DllImport("libXtst.so.6")]
@@ -73,8 +85,5 @@ class X11
 
     [DllImport("libX11.so.6")]
     public static extern int XFlush(IntPtr display);
-
-    public const ulong XK_H = 0x0068;
-    public const ulong XK_I = 0x0069;
 
 }

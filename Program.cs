@@ -55,8 +55,6 @@ class Buffers
 class Program
 {
 
-    
-    
     static void Main()
     {
 
@@ -73,8 +71,18 @@ class Program
         IntPtr rootWindow = XDefaultRootWindow(dpy); // Get root window
 
         int f1_keycode = XKeysymToKeycode(dpy, XK_F1); // Translate from logic virtual key value to physical keycode
-
-        XGrabKey(dpy, f1_keycode, 0, rootWindow, true, GrabModeAsync, GrabModeAsync);
+       
+        // Used to grab combinations of key such as {key}+CapsLock, etc
+        uint[] lockCombos = {
+            0,
+            LockMask,
+            Mod2Mask,
+            LockMask | Mod2Mask,
+        };
+        
+        foreach (uint mods in lockCombos) {
+            XGrabKey(dpy, f1_keycode, mods, rootWindow, true, GrabModeAsync, GrabModeAsync);
+        }
         XSync(dpy, false);
         
         Console.WriteLine("[i] Esperando F1...");
