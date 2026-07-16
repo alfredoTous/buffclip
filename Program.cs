@@ -3,10 +3,21 @@
 
 class Program
 {
+
+    static void InitiateNetworkListener()
+    {
+        NetworkManager netman = new NetworkManager(4444);
+        Thread thread = new Thread(netman.StartServer);
+        thread.IsBackground = true;
+        thread.Start();
+    }
+
     static void Main()
     {
+        InitiateNetworkListener(); // Initiates server at 0.0.0.0:4444 Consider adjusting this via Parameters
+
         int NUMBER_OF_BUFFERS = 2;
-        Buffers buffers = new Buffers(NUMBER_OF_BUFFERS);
+        Buffers buffers = new Buffers(NUMBER_OF_BUFFERS); // Initiate buffers
 
         // Manage key press with X11 APIs for global key grab
         IntPtr dpy = XOpenDisplay(IntPtr.Zero); // Open connection to the X11 server
