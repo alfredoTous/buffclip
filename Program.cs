@@ -1,25 +1,91 @@
 ﻿using static X11;
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+
+class ClipboardManager 
+{
+    IntPtr display;
+    IntPtr atomPrimary;
+    IntPtr atomClipboard;
+    IntPtr atomUTF8;
+    IntPtr atomString;
+    IntPtr atomProperty;
+
+    
+    public ClipboardManager()
+    {
+        this.display = XOpenDisplay(IntPtr.Zero);
+        if (this.display == IntPtr.Zero)
+            throw new Exception("[-] Error XOpenDisplay failed");
+        
+        this.atomPrimary = XInternAtom(display, "PRIMARY", 0);
+        this.atomClipboard = XInternAtom(display, "CLIPBOARD", 0);
+        this.atomUTF8 = XInternAtom(display, "UTF8_STRING", 0);
+        this.atomString = XInternAtom(display, "STRING", 0);
+        this.atomProperty = XInternAtom(display, "BUFFCLIP_PROPERTY", 0);
+
+    }
+
+    public string GetClipBoardContent(string selection)
+    {
+        int screen = XDefaultScreen(this.display);
+        IntPtr window = XCreateSimpleWindow(display, XRootWindow(display, screen), 0, 0, 1,1, 0, 0, 0); // Create invisible window to request clipboard content
+        
+        // Ask for content in UTF8 format
+        XConvertSelection(display, selection == "PRIMARY" ? this.atomPrimary : this.atomClipboard, this.atomUTF8, this.atomProperty, window, CurrentTime);
+        XFlush(display);
+
+        XEvent xEvent;
+        while (true) {
+            XNextEvent(display, out xEvent);
+            if (xEvent.type == SelectionNotify) { // Received answer from owner
+                ref XSelectionEvent sel = ref xEvent.xselection;
+
+                if (sel.property == None)
+                    throw new Exception("[-] Owner does not support target format");
+
+                IntPtr actualType = IntPtr.Zero;
+                int actualFormat = 0;
+                IntPtr itemsCount = IntPtr.Zero;
+                IntPtr bytesAfter = IntPtr.Zero;
+                IntPtr data = IntPtr.Zero;
+
+                XGetWindowProperty(this.display, window, sel.property, IntPtr.Zero, new IntPtr(-1), 0, AnyPropertyType, ref actualType, ref actualFormat, ref itemsCount, ref bytesAfter, ref data);
+
+                string result = Marshal.PtrToStringAnsi(data)!;
+                return result;
+            }
+        }
+    }
+
+    ~ClipboardManager()
+    {
+        XCloseDisplay(this.display);
+    }
+}
 
 
 class Buffers
 {
     public int NumberOfBuffers;
     public string[] buffers;
+    private ClipboardManager clip;
 
     // Constructor
     public Buffers(int NumberOfBuffers)
     {
         this.NumberOfBuffers = NumberOfBuffers;
-        buffers = new string[NumberOfBuffers];
+        this.buffers = new string[this.NumberOfBuffers];
+        this.clip = new ClipboardManager();
     }
 
 
     // Get content of PRIMARY selection and save it into indicated buffer
     public void CopyToBuffer(int id_buf)
     {
-        string content = this.GetClipBoardContent("PRIMARY");
+        string content = this.clip.GetClipBoardContent("PRIMARY");
         this.buffers[id_buf] = content;
     }
     
@@ -27,7 +93,7 @@ class Buffers
     public void PasteFromBuffer(IntPtr dpy, int id_buf)
     {
         // Temporarily save content of CLIPBOARD
-        string content = GetClipBoardContent("CLIPBOARD");
+        string content = this.clip.GetClipBoardContent("CLIPBOARD");
 
         // Change content of CLIPBOARD to buffer content
         this.SetClipboardContent("CLIPBOARD", buffers[id_buf]);
@@ -37,23 +103,6 @@ class Buffers
         Thread.Sleep(20);
         // Return original value
         this.SetClipboardContent("CLIPBOARD", content);
-    }
-
-
-    // Calls XCLIP and returns the indicated selection content
-    private string GetClipBoardContent(string selection) {
-        ProcessStartInfo psi = new ProcessStartInfo("xclip", $"-sel {selection} -o") {
-            RedirectStandardOutput = true,
-            UseShellExecute = false
-        };
-        using var p = Process.Start(psi);
-        if (p == null) {
-            Console.WriteLine("[-] Error xclip failed to initialize");
-            return String.Empty;
-        } 
-        string content = p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
-        return content;
     }
 
     // Calls XCLIP and SETS the content for a selection
