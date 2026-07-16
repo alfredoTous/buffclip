@@ -34,7 +34,7 @@ class Buffers
 
         // SimulateCtrlShiftV KeyPress
         this.SimulateCtrlShiftV(dpy);
-
+        Thread.Sleep(20);
         // Return original value
         this.SetClipboardContent("CLIPBOARD", content);
     }
@@ -52,6 +52,7 @@ class Buffers
             return String.Empty;
         } 
         string content = p.StandardOutput.ReadToEnd();
+        p.WaitForExit();
         return content;
     }
 
@@ -67,6 +68,8 @@ class Buffers
             return;
         }
         p.StandardInput.Write(content);
+        p.StandardInput.Close();
+        p.WaitForExit();
     }
     
     // Simulates key strokes for pasting
