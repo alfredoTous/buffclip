@@ -15,9 +15,8 @@ abstract class NetworkManager
 
     protected void SendPacket(Packet packet)
     {
-
         if (this.NetStream == null)
-            throw new Exception("[-] Not connected");
+            return;
 
         byte[] packetBytes = packet.ToBytes();
         byte[] lenBytes    = BitConverter.GetBytes(packetBytes.Length);
