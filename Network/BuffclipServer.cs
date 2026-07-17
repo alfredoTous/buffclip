@@ -36,7 +36,7 @@ class BuffclipServer : NetworkManager
 
         try {
             while (true) {
-                Packet packet = ReceivePacket();
+                Packet packet = this.ReceivePacket();
 
                 switch (packet.opcode) {
                     case Opcode.FullSync:
@@ -65,8 +65,13 @@ class BuffclipServer : NetworkManager
 
     public void HandleFullSyncRequest()
     {
-
         Console.WriteLine("Recibida la FullSyncRequest, preparando paquetes...");
+        
+        for (byte idx=0; idx<Globals.BuffersManager.NumberOfBuffers; idx++) {
+            Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, idx, Globals.BuffersManager.buffers[idx]);
+            SendPacket(packet);
+        }
+        Console.WriteLine("Paquetes enviados");
     }
 
 

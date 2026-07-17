@@ -4,7 +4,7 @@ class HotkeyManager
 {
     // Intentar remover la dependencia de los buffers mas adelante
 
-    public static void ListenForKeyPress(Buffers buffers)
+    public static void ListenForKeyPress()
     {
         // Manage key press with X11 APIs for global key grab
         IntPtr dpy = XOpenDisplay(IntPtr.Zero); // Open connection to the X11 server
@@ -49,13 +49,16 @@ class HotkeyManager
 
                 if (ev.type == KeyRelease) {
                     if (ev.xkey.keycode == f1_keycode) 
-                        buffers.CopyToBuffer(0);
+                        Globals.BuffersManager.CopyToBuffer(0);
+
                     if (ev.xkey.keycode == f2_keycode) 
-                        buffers.PasteFromBuffer(dpy, 0);
+                        Globals.BuffersManager.PasteFromBuffer(dpy, 0);
+
                     if (ev.xkey.keycode == f3_keycode) 
-                        buffers.CopyToBuffer(1);
+                        Globals.BuffersManager.CopyToBuffer(1);
+
                     if (ev.xkey.keycode == f4_keycode) 
-                        buffers.PasteFromBuffer(dpy, 1);
+                        Globals.BuffersManager.PasteFromBuffer(dpy, 1);
             }   }
         }
         catch (Exception ex) {

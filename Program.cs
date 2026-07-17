@@ -1,28 +1,38 @@
-﻿class Program
+﻿
+
+static class Globals
+{
+        static int NumberOfBuffers = 2;
+        public static BuffersManager BuffersManager = new BuffersManager(NumberOfBuffers);  // Initiate Buffers;
+}
+
+
+class Program
 {
 
     static void PrintHelp()
     {
         Console.WriteLine(
-    @"BuffClip - Network clipboard manager - Inspired by Kitty terminal
+    @"Buffclip - Network clipboard manager - Inspired by Kitty terminal
 
     Usage:
         buffclip server
         buffclip client <server-ip>
 
     Commands:
-        server              Start BuffClip in server mode.
-        client <server-ip>  Connect to a BuffClip server.
+        server              Start Buffclip in server mode.
+        client <server-ip>  Connect to a Buffclip server.
 
     Examples:
         buffclip server
         buffclip client 192.168.1.100");
     }
 
+
     static void InitiateNetworkListener()
     {
-        BuffclipServer server = new BuffclipServer("0.0.0.0", 4444);        // Default values for now
-        Thread thread = new Thread(server.StartServer);
+        BuffclipServer server = new BuffclipServer("0.0.0.0", 4443);        // Default values for now
+        Thread thread = new Thread(server.StartServer);     // Starts server and handles client connections
         thread.IsBackground = true;
         thread.Start();
     }
@@ -39,9 +49,7 @@
             case "server":
                 {
                     InitiateNetworkListener(); // Initiates server at 0.0.0.0:4444 Consider adjusting this via Parameters
-                    int NUMBER_OF_BUFFERS = 2;
-                    Buffers buffers = new Buffers(NUMBER_OF_BUFFERS); // Initiate buffers
-                    HotkeyManager.ListenForKeyPress(buffers); // Waits for KeyPress/KeyRelease Events
+                    HotkeyManager.ListenForKeyPress(); // Waits for KeyPress/KeyRelease Events
                     break;
                 }
 
@@ -51,9 +59,10 @@
                         Console.WriteLine("Usage: buffclip client <ip>");
                         return;
                     }
-                    BuffclipClient client = new BuffclipClient("192.168.1.47", 4444);
+                    BuffclipClient client = new BuffclipClient("192.168.1.47", 4443);
                     client.Connect();
-                    client.SendFullSyncRequest(1);
+                    client.SendFullSyncRequest();
+                    client.GetFullSyncResponse();
                     break;
                 }
 
