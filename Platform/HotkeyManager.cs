@@ -51,7 +51,8 @@ class HotkeyManager
                     if (ev.xkey.keycode == f1_keycode) 
                     {
                         Globals.BuffersManager.CopyToBuffer(0);
-                        network.SendUpdateBuffer(0);
+                        if (network.IsConnected)
+                            network.SendUpdateBuffer(0);
                     }
 
                     if (ev.xkey.keycode == f2_keycode) 
@@ -60,7 +61,8 @@ class HotkeyManager
                     if (ev.xkey.keycode == f3_keycode) 
                     {
                         Globals.BuffersManager.CopyToBuffer(1);
-                        network.SendUpdateBuffer(1);
+                        if (network.IsConnected)
+                            network.SendUpdateBuffer(1);
                     }
 
                     if (ev.xkey.keycode == f4_keycode) 

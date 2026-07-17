@@ -1,0 +1,151 @@
+=========================
+ BuffClip - TODO
+=========================
+
+[HIGH PRIORITY]
+
+[ ] Implement native X11 clipboard owner
+    - Remove xclip dependency entirely
+    - Read  -> Native X11
+    - Write -> Native X11
+    - Eliminate Thread.Sleep(20)
+    - Support holding F2/F4 for repeated paste
+
+[ ] Windows support
+    - WinAPI Clipboard
+    - WinAPI global hotkeys
+    - Share BufferManager and NetworkManager between Linux/Windows
+
+[ ] Local mode
+    - buffclip local
+    - Disable all networking
+    - Local clipboard manager only
+
+[ ] Automatic reconnect
+    - Client retries connection every X seconds
+    - Automatically perform FullSync after reconnect
+
+[ ] Security prompt
+    - Warn before listening on 0.0.0.0
+    - Example:
+        "Are you sure you want to expose BuffClip on all interfaces?"
+        "Is this your trusted home network? [y/N]"
+
+--------------------------------------------------
+
+[MEDIUM PRIORITY]
+
+[ ] TLS encryption
+    - Replace raw NetworkStream with SslStream
+    - Encrypt clipboard contents in transit
+    - Protect integrity of packets
+
+[ ] Logging
+    - INFO
+    - WARNING
+    - ERROR
+    - Optional verbose mode
+
+[ ] Configuration file
+    Example:
+
+        listen = 0.0.0.0
+        port = 4443
+        buffers = 2
+
+        copy_buffer0 = F1
+        paste_buffer0 = F2
+        copy_buffer1 = F3
+        paste_buffer1 = F4
+
+[ ] Command line improvements
+    - buffclip server
+    - buffclip client <ip>
+    - buffclip local
+
+--------------------------------------------------
+
+[NICE TO HAVE]
+
+[ ] Clipboard history
+    - Keep previous clipboard entries
+    - Navigate history
+    - Optional history size
+
+[ ] Clipboard ring
+    - Multiple clipboard entries per buffer
+    - Quick selector
+
+[ ] Clipboard images
+    - Synchronize copied images
+
+[ ] File clipboard support
+    - Copy/paste files between machines
+
+[ ] Automatic server discovery
+    - mDNS / Zeroconf
+    - Connect without typing IP
+
+[ ] Compression
+    - Compress large clipboard payloads
+    - LZ4 or similar
+
+[ ] CLI status command
+
+    buffclip status
+
+    Connected : Yes
+    Server    : 192.168.x.x
+    Buffers   : 2
+    Latency   : 2 ms
+
+--------------------------------------------------
+
+[CODE QUALITY]
+
+[ ] Remove remaining duplicated code
+
+[ ] Unit tests
+    - Packet serialization
+    - Packet deserialization
+    - Network protocol
+
+[ ] Improve error handling
+    - Lost connection
+    - Clipboard owner changes
+    - Invalid packets
+
+[ ] Documentation
+    - README
+    - Architecture diagram
+    - Network protocol documentation
+    - Build instructions
+    - Windows/Linux usage
+
+[ ] CI pipeline
+    - Build on Linux
+    - Build on Windows
+
+--------------------------------------------------
+
+[FUTURE IDEAS]
+
+[ ] Authentication
+    - Password / shared secret
+    - Reject unauthorized clients
+
+[ ] Multiple simultaneous clients
+
+[ ] Buffer synchronization statistics
+
+[ ] Optional notifications
+    - "Buffer #1 updated"
+
+[ ] GUI (optional)
+    - Tray icon
+    - Buffer viewer
+    - Settings
+
+[ ] Package releases
+    - Arch package (PKGBUILD)
+    - Windows executable

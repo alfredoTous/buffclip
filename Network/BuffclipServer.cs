@@ -75,13 +75,6 @@ class BuffclipServer : NetworkManager
     }
 
 
-    public override void SendUpdateBuffer(byte id_buf)
-    {
-        Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, id_buf, Globals.BuffersManager.GetBuf(id_buf));
-        SendPacket(packet);
-    }
-
-
     public void HandleUpdateBuffer(Packet packet)
     {
         Globals.BuffersManager.SetBuf(packet.id_buf, packet.content);

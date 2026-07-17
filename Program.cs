@@ -30,8 +30,8 @@ class Program
 
     static BuffclipServer InitServer()
     {
-        BuffclipServer server = new BuffclipServer("0.0.0.0", 4443);        // Default values for now
-        Thread thread = new Thread(server.Start);     // Starts server and handles client connections
+        BuffclipServer server = new BuffclipServer("0.0.0.0", 4443);    // Default values for now
+        Thread thread = new Thread(server.Start);                       // Starts server and handles client connections
         thread.IsBackground = true;
         thread.Start();
         return server;
@@ -57,7 +57,7 @@ class Program
         {
             case "server":
                 {
-                    BuffclipServer server = InitServer(); // Initiates server at 0.0.0.0:4443 Consider adjusting this via Parameters
+                    BuffclipServer server = InitServer();    // Initiates server at 0.0.0.0:4443 Consider adjusting this via Parameters
                     HotkeyManager.ListenForKeyPress(server); // Waits for KeyPress/KeyRelease Events
                     break;
                 }
@@ -68,7 +68,7 @@ class Program
                         Console.WriteLine("Usage: buffclip client <ip>");
                         return;
                     }
-                    BuffclipClient client = InitClient(); // Initiates client and listens for Server packet
+                    BuffclipClient client = InitClient();    // Initiates client and listens for Server packet
                     HotkeyManager.ListenForKeyPress(client);
                     break;
                 }

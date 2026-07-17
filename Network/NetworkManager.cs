@@ -8,10 +8,14 @@ abstract class NetworkManager
     protected int port;
     protected TcpClient? client;
     protected NetworkStream? NetStream;
+    public bool IsConnected => this.NetStream != null;
 
 
-    public abstract void SendUpdateBuffer(byte id_buf);
-
+    public void SendUpdateBuffer(byte id_buf) {
+        Console.WriteLine("[+] Enviando paquete");
+        Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, id_buf, Globals.BuffersManager.GetBuf(id_buf));
+        SendPacket(packet);
+    }
 
     protected void SendPacket(Packet packet)
     {
