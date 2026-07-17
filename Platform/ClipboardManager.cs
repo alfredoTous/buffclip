@@ -31,32 +31,41 @@ public class ClipboardManager
     public string GetClipBoardContent(string selection)
     {
         int screen = XDefaultScreen(this.display);
-        IntPtr window = XCreateSimpleWindow(display, XRootWindow(display, screen), 0, 0, 1,1, 0, 0, 0); // Create invisible window to request clipboard content
+        IntPtr window = XCreateSimpleWindow(display, XRootWindow(display, screen), 0, 0, 1, 1, 0, 0, 0); // Create invisible window to request clipboard content
         
-        // Ask for content in UTF8 format
-        XConvertSelection(display, selection == "PRIMARY" ? this.atomPrimary : this.atomClipboard, this.atomUTF8, this.atomProperty, window, CurrentTime);
-        XFlush(display);
+        try {
+            // Ask for content in UTF8 format
+            XConvertSelection(display, selection == "PRIMARY" ? this.atomPrimary : this.atomClipboard, this.atomUTF8, this.atomProperty, window, CurrentTime);
+            XFlush(display);
 
-        XEvent xEvent;
-        while (true) {
-            XNextEvent(display, out xEvent);
-            if (xEvent.type == SelectionNotify) { // Received answer from owner
-                ref XSelectionEvent sel = ref xEvent.xselection;
+            XEvent xEvent;
+            while (true) {
+                XNextEvent(display, out xEvent);
+                if (xEvent.type == SelectionNotify) { // Received answer from owner
+                    ref XSelectionEvent sel = ref xEvent.xselection;
 
-                if (sel.property == None)
-                    throw new Exception("[-] Owner does not support target format");
+                    if (sel.property == None)
+                        return "";
 
-                IntPtr actualType = IntPtr.Zero;
-                int actualFormat = 0;
-                IntPtr itemsCount = IntPtr.Zero;
-                IntPtr bytesAfter = IntPtr.Zero;
-                IntPtr data = IntPtr.Zero;
+                    IntPtr actualType = IntPtr.Zero;
+                    int actualFormat = 0;
+                    IntPtr itemsCount = IntPtr.Zero;
+                    IntPtr bytesAfter = IntPtr.Zero;
+                    IntPtr data = IntPtr.Zero;
 
-                XGetWindowProperty(this.display, window, sel.property, IntPtr.Zero, new IntPtr(-1), 0, AnyPropertyType, ref actualType, ref actualFormat, ref itemsCount, ref bytesAfter, ref data);
+                    XGetWindowProperty(this.display, window, sel.property, IntPtr.Zero, new IntPtr(-1), 0, AnyPropertyType, ref actualType, ref actualFormat, ref itemsCount, ref bytesAfter, ref data);
 
-                string result = Marshal.PtrToStringAnsi(data)!;
-                return result;
+                    string result = "";
+                    if (data != IntPtr.Zero) {
+                        result = Marshal.PtrToStringAnsi(data)!;
+                        XFree(data);
+                    }
+                    return result;
+                }
             }
+        } finally {
+            XDestroyWindow(this.display, window);
+            XFlush(this.display);
         }
     }
 
