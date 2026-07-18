@@ -4,9 +4,11 @@ using System.Net;
 
 class BuffclipServer : NetworkManager
 {
-    private string listenAddress = "";
+    private readonly string[] listenAddresses;
     private readonly List<ClientConnection> clients = new(); // Mantain a client list
     private readonly object clientsLock = new object();      // Lock for securely managing threads
+    private byte nextNodeId = 2;
+    private readonly object nodeIdLock = new object();
 
     public override bool IsConnected
     {
@@ -18,34 +20,83 @@ class BuffclipServer : NetworkManager
         }
     }
 
-    public BuffclipServer(string listenAddress, int port)
+    public BuffclipServer(string[] listenAddresses, int port)
     {
-        this.listenAddress = listenAddress;
-        this.port          = port;
-        this.node_id       = 1; // node_id 1 is the server
+        this.listenAddresses = listenAddresses;
+        this.port            = port;
+        this.node_id         = 1; // node_id 1 is the server
     }
 
-    public void Start()
+    private void RunAcceptLoop(TcpListener listener)
     {
-        TcpListener listener = new TcpListener(IPAddress.Any, this.port);
-        listener.Start();
-        Console.WriteLine($"[+] Server listening on {IPAddress.Any}:{this.port}...");
-
-        byte next_node_id = 2;
-        while (true) {
-            try {
+        while (true)
+        {
+            try
+            {
                 TcpClient client = listener.AcceptTcpClient();
-                ClientConnection clientConnection = new ClientConnection(next_node_id, client);
-                Console.WriteLine($"[+] Client connected: {client.Client.RemoteEndPoint} (Assigned Node ID: {next_node_id})");
-                next_node_id++;
+                byte assignedId;
+                lock (nodeIdLock)
+                {
+                    assignedId = nextNodeId;
+                    nextNodeId++;
+                }
+                ClientConnection clientConnection = new ClientConnection(assignedId, client);
+                Console.WriteLine($"[+] Client connected: {client.Client.RemoteEndPoint} (Assigned Node ID: {assignedId})");
 
                 Thread thread = new Thread(() => HandleClient(clientConnection));
                 thread.IsBackground = true;
                 thread.Start();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine($"[-] Error accepting client: {ex.Message}");
             }
         }
+    }
+
+    public void Start()
+    {
+        List<TcpListener> listeners = new List<TcpListener>();
+        foreach (var addressStr in listenAddresses)
+        {
+            string trimmed = addressStr.Trim();
+            if (IPAddress.TryParse(trimmed, out IPAddress? ipAddress))
+            {
+                try
+                {
+                    TcpListener listener = new TcpListener(ipAddress, this.port);
+                    listener.Start();
+                    listeners.Add(listener);
+                    Console.WriteLine($"[+] Server listening on {ipAddress}:{this.port}...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[-] Error starting server on {trimmed}:{this.port}: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[-] Invalid IP address format: '{trimmed}'");
+            }
+        }
+
+        if (listeners.Count == 0)
+        {
+            Console.WriteLine("[-] No valid listening interfaces could be started. Server exiting.");
+            return;
+        }
+
+        // Start background accept loops for all but the last listener
+        for (int i = 0; i < listeners.Count - 1; i++)
+        {
+            var listener = listeners[i];
+            Thread listenThread = new Thread(() => RunAcceptLoop(listener));
+            listenThread.IsBackground = true;
+            listenThread.Start();
+        }
+
+        // Run the last listener's loop directly on this thread to block it naturally
+        RunAcceptLoop(listeners[listeners.Count - 1]);
     }
 
     private void HandleClient(ClientConnection conn)
