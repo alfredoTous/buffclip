@@ -8,10 +8,10 @@ abstract class NetworkManager
     protected int port;
     protected TcpClient? client;
     protected NetworkStream? NetStream;
-    public bool IsConnected => this.NetStream != null;
+    public virtual bool IsConnected => this.NetStream != null;
 
 
-    public void SendUpdateBuffer(byte id_buf) {
+    public virtual void SendUpdateBuffer(byte id_buf) {
         Console.WriteLine("[+] Enviando paquete");
         Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, id_buf, Globals.BuffersManager.GetBuf(id_buf));
         SendPacket(packet);
@@ -30,28 +30,26 @@ abstract class NetworkManager
 
     }
 
-    protected Packet ReceivePacket()
+    protected Packet ReceivePacket(NetworkStream? stream = null)
     {
-        if (this.NetStream == null)
-            throw new Exception("[-] Not connected");
+        NetworkStream netStream = stream ?? this.NetStream ?? throw new Exception("[-] Not connected");
 
         byte[] lenBytes = new byte[sizeof(int)];
-        ReadExact(lenBytes, sizeof(int)); // Read packet total len
+        ReadExact(netStream, lenBytes, sizeof(int)); // Read packet total len
         
         int packetLen = BitConverter.ToInt32(lenBytes);
         byte[] packetBytes = new byte[packetLen];
-        ReadExact(packetBytes, packetLen);
+        ReadExact(netStream, packetBytes, packetLen);
 
         return Packet.FromBytes(packetBytes);
-
     }
 
-    private void ReadExact(byte[] buffer, int len)
+    private void ReadExact(NetworkStream netStream, byte[] buffer, int len)
     {
         int totalRead = 0;
 
         while (totalRead < len) {
-            int bytesRead = this.NetStream!.Read(buffer, totalRead, len-totalRead);
+            int bytesRead = netStream.Read(buffer, totalRead, len-totalRead);
             
             if (bytesRead == 0)
                 throw new Exception("Connection closed");
@@ -59,8 +57,6 @@ abstract class NetworkManager
             totalRead+=bytesRead;
         }
     }
-
-
 }
 
 enum Opcode : byte

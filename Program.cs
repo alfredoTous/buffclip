@@ -49,6 +49,11 @@ class Program
     
     static void Main(string[] args)
     {
+        if (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland") {
+            Console.WriteLine("[-] Wayland session detected");
+            Console.WriteLine("[-] Buffclip is currently only supported on X11");
+            return;
+        }
         if (args.Length == 0) {
             PrintHelp();
             return;

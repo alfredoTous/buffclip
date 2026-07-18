@@ -46,8 +46,8 @@ class BuffclipClient : NetworkManager
 
     private void SyncBuffers()
     {
-        SendFullSyncRequest();
-        GetFullSyncResponse();
+        this.SendFullSyncRequest();
+        this.GetFullSyncResponse();
     }
 
     private void HandleUpdateBuffer(Packet packet) 
@@ -64,7 +64,7 @@ class BuffclipClient : NetworkManager
         {
             while (true)
             {
-                Packet packet = ReceivePacket();
+                Packet packet = this.ReceivePacket();
 
                 switch (packet.opcode)
                 {
