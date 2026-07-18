@@ -87,7 +87,7 @@ static class ArgParser
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("[!] WARNING: Listening on '0.0.0.0' (all interfaces) exposes Buffclip to your entire network.");
-                Console.WriteLine("    If you want to restrict this, use the '-i' / '--interface' option to specify a single interface (e.g. '-i 127.0.0.1').");
+                Console.WriteLine("    If you want to restrict this, use the '-i' / '--interface' option to specify a single or multiple interfaces (e.g. '-i 127.0.0.1').");
                 Console.Write("    Are you on a secure/trusted network and sure you want to proceed? [y/N]: ");
                 Console.ResetColor();
                 string? response = Console.ReadLine();
