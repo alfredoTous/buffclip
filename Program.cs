@@ -1,6 +1,5 @@
 using System.CommandLine;
 using System.Net;
-using System.Text;
 
 
 // Global state for buffers
@@ -128,8 +127,8 @@ static class ArgParser
         var rootCommand = new RootCommand("Buffclip - Network clipboard manager");
 
         rootCommand.Subcommands.Add(BuildServerCommand());
-        rootCommand.Subcommands.Add(BuildLocalCommand());
         rootCommand.Subcommands.Add(BuildClientCommand());
+        rootCommand.Subcommands.Add(BuildLocalCommand());
 
         return rootCommand;
     }
@@ -183,7 +182,7 @@ static class ArgParser
 
     private static Command BuildLocalCommand()
     {
-        var cmd = new Command("local", "Start Buffclip in local-only mode (no network listening).");
+        var cmd = new Command("local", "Start Buffclip without networking.");
 
         cmd.SetAction(_ => Program.RunLocalMode());
 

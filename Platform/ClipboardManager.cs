@@ -1,20 +1,26 @@
 using static X11;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 public class ClipboardManager 
 {
-    public event Action<byte, string> SelectionContentReceived; // Event to trigger buffer update and network forwards
+    public event Action<byte, string>? PrimaryContentReceived;  // Event to trigger buffer update and network forwards
     IntPtr display;
     IntPtr window;
     IntPtr atomPrimary;
     IntPtr atomClipboard;
     IntPtr atomTargets;
     IntPtr atomUTF8;
-    private byte[] pendingContentBytes = Array.Empty<byte>();
-
     IntPtr negotiatedTarget = IntPtr.Zero;
-    private byte pendingBufferId;
+
+    private byte[] pendingContentBytes = Array.Empty<byte>(); // Used to know buffer content
+
+    private byte pendingBufferId;                             // Used to know buffer id
+
+    private bool pendingPaste = false;
+    private byte pendingPasteBufferId;
+
 
 
     public ClipboardManager(IntPtr display)
@@ -74,9 +80,11 @@ public class ClipboardManager
     }
 
 
-    public void RequestSelectionContent(byte id_buf, string selection) // Triggers SelectionNotify event
+    public void RequestSelectionContent(string selection, byte? id_buf = null) // Triggers SelectionNotify event
     {
-        this.pendingBufferId = id_buf;
+        if (id_buf != null)
+            this.pendingBufferId = (byte)id_buf;
+
         IntPtr atomSelection = selection == "CLIPBOARD" ? this.atomClipboard : this.atomPrimary;
         XConvertSelection(display, atomSelection, this.atomTargets, atomSelection, this.window, CurrentTime);
     }
@@ -126,16 +134,77 @@ public class ClipboardManager
 
                 if (this.negotiatedTarget != IntPtr.Zero)
                 {
-                    XConvertSelection(this.display, this.atomPrimary, this.negotiatedTarget, this.atomPrimary, this.window, CurrentTime);
+                    XConvertSelection(this.display, selection.selection, this.negotiatedTarget, selection.selection, this.window, CurrentTime);
                 }
             } 
             else if (selection.target == this.negotiatedTarget) // Got data
             {
-                string? decodedData = Marshal.PtrToStringUTF8(data);
-                this.SelectionContentReceived.Invoke(pendingBufferId, decodedData!); // Trigger event
+                string? decodedData = Marshal.PtrToStringUTF8(data, count.ToInt32());
+                if (selection.selection == this.atomPrimary)
+                    this.PrimaryContentReceived?.Invoke(pendingBufferId, decodedData!); // Trigger event that changes buffer content and forwards network packets
+                if (selection.selection == this.atomClipboard && this.pendingPaste == true)
+                {
+                    this.FinishPasteBufferContent(decodedData!);
+                }
             }
             if (data != IntPtr.Zero) XFree(data);
         }
+    }
+
+
+    public void BeginPasteBufferContent(byte id_buf)
+    {
+        this.pendingPasteBufferId = id_buf;
+        this.pendingPaste = true;
+        RequestSelectionContent("CLIPBOARD"); // Request clipboard content for backup (Triggers SelectionNotify)
+    }
+
+    private void FinishPasteBufferContent(string clipboardContentBackup)
+    {
+        this.pendingPaste = false;
+        
+        // Own clipboard selection to temporarily change its content
+        BecomeOwner(Globals.BuffersManager.GetBuf(this.pendingPasteBufferId), "CLIPBOARD");
+        HotkeyManager.SimulateCtrlShiftV(display); // Simulate Ctrl+shift+v
+
+        this.WaitAndRestoreClipboard(clipboardContentBackup);
+
+    }
+
+    // Clients keeps sending events so we can't just restore clipboard immediately, so we use a lil wait
+    private void WaitAndRestoreClipboard(string backupContent)
+    {
+        const int quietMs = 30;    // No events activity for this time, we assume client stopped sending events and can now restore clipboard
+        const int hardCapMs = 400; // Max waiting
+
+        var overall = Stopwatch.StartNew();
+        var sinceLastServe = Stopwatch.StartNew();
+
+        while (sinceLastServe.ElapsedMilliseconds < quietMs && overall.ElapsedMilliseconds < hardCapMs)
+        {
+            if (XPending(display) > 0)
+            {
+                XEvent ev;
+                XNextEvent(display, out ev);
+
+                if (ev.type == SelectionRequest)
+                {
+                    HandleSelectionRequest(ev.xselectionrequest);
+                    if (ev.xselectionrequest.target == atomUTF8)
+                        sinceLastServe.Restart(); // We receive more events from client, restart timer
+                }
+                else
+                {
+                    HotkeyManager.HandleXEvent(ev); // Don't lose other events that may arrive
+                }
+            }
+            else
+            {
+                Thread.Sleep(2);
+            }
+        }
+
+        BecomeOwner(backupContent, "CLIPBOARD");
     }
 
 }
