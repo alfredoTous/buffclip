@@ -1,8 +1,7 @@
-using System;
 using System.Runtime.InteropServices;
 
 // X11 Definitions
-class X11
+public class X11
 {
     // ========== CONSTANTS ==========
     
@@ -69,6 +68,7 @@ class X11
         public IntPtr serial;
         public int send_event;
         public IntPtr display;
+        public IntPtr owner;
         public IntPtr requestor;
         public IntPtr selection;
         public IntPtr target;
@@ -174,6 +174,20 @@ class X11
     [DllImport("libX11.so.6")]
     public static extern int XChangeProperty(IntPtr display, IntPtr w, IntPtr property, IntPtr type,
         int format, int mode, IntPtr data, int nelements);
+
+public static IntPtr XA_ATOM = (IntPtr)4;
+
+    [DllImport("libX11.so.6")]
+public static extern int XChangeProperty(
+    IntPtr display,
+    IntPtr w,
+    IntPtr property,
+    IntPtr type,
+    int format,
+    int mode,
+    ref IntPtr data,
+    int nelements
+);
     
     [DllImport("libX11.so.6")]
     public static extern int XGetWindowProperty(IntPtr display, IntPtr w, IntPtr property, IntPtr long_offset,

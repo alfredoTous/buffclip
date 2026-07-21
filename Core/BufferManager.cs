@@ -13,7 +13,7 @@ class BuffersManager
         for (int i = 0; i < this.NumberOfBuffers; i++)
             buffers[i] = "";
 
-        this.clip = new ClipboardManager();
+        //this.clip = new ClipboardManager();
     }
 
 
