@@ -175,7 +175,8 @@ public class X11
     public static extern int XChangeProperty(IntPtr display, IntPtr w, IntPtr property, IntPtr type,
         int format, int mode, IntPtr data, int nelements);
 
-public static IntPtr XA_ATOM = (IntPtr)4;
+public static IntPtr XA_ATOM   = (IntPtr)4;
+public static IntPtr XA_STRING = (IntPtr)31;
 
     [DllImport("libX11.so.6")]
 public static extern int XChangeProperty(
@@ -193,6 +194,22 @@ public static extern int XChangeProperty(
     public static extern int XGetWindowProperty(IntPtr display, IntPtr w, IntPtr property, IntPtr long_offset,
         IntPtr long_length, int delete, IntPtr req_type, ref IntPtr actual_type_return, ref int actual_format_return,
         ref IntPtr nitems_return, ref IntPtr bytes_after_return, ref IntPtr prop_return);
+
+    [DllImport("libX11.so.6")]
+public static extern int XGetWindowProperty(
+    IntPtr display,
+    IntPtr w,
+    IntPtr property,
+    IntPtr long_offset,
+    IntPtr long_length,
+    bool delete,
+    IntPtr req_type,
+    out IntPtr actual_type,
+    out int actual_format,
+    out IntPtr nitems,
+    out IntPtr bytes_after,
+    out IntPtr prop
+);
     
     [DllImport("libX11.so.6")]
     public static extern int XDeleteProperty(IntPtr display, IntPtr w, IntPtr property);

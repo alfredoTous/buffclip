@@ -50,7 +50,7 @@ class BuffclipClient : NetworkManager
 
     private void GetFullSyncResponse()
     {
-        for (int idx=0; idx<Globals.BuffersManager.NumberOfBuffers; idx++)
+        for (int idx=1; idx<Globals.BuffersManager.NumberOfBuffers+1; idx++)
         {
             Packet packet = ReceivePacket();
             Globals.BuffersManager.SetBuf(idx, packet.content);

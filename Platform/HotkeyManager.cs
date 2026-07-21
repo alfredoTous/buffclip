@@ -1,6 +1,5 @@
 using static X11;
 
-using System.Text;
 
 class HotkeyManager
 {
@@ -15,6 +14,16 @@ class HotkeyManager
             throw new Exception("[-] Error XOpenDisplay failed");
 
         ClipboardManager clipboard = new ClipboardManager(display);
+        // Subscribe to event
+        // This event is trigerred on F1/F3 keypresses by clipboard.HandleSelectionNotify
+        clipboard.SelectionContentReceived += (bufferId, content) =>
+        {
+            if (!Globals.BuffersManager.IsDifferentContent(content, bufferId)) return; // Avoid actions if content is the same
+
+            Globals.BuffersManager.SetBuf(bufferId, content);
+            if (network.IsConnected)
+                network.SendUpdateBuffer(bufferId);
+        };
 
         IntPtr rootWindow = XDefaultRootWindow(display); // Get root window, needed for Global Grab of F1/F2/F3/F4 keys
 
@@ -60,40 +69,47 @@ class HotkeyManager
                     {
                         // Buffer 1
                         if (ev.xkey.keycode == f1_keycode) 
-                        {
-                            if (!Globals.BuffersManager.IsDifferentContent(1)) continue; // Avoid actions if content is the same
+                        { 
+                            // Triggers SelectionNotify event (XConvertSelection Api)
+                            clipboard.RequestSelectionContent(1, "PRIMARY");
+                            // This usually triggers 2 SelectionNotify events, first to get the targets (formats we support) and the other with the actual content of the selection (in this case PRIMARY)
+                            // When the actual content of the selection is got, clipboard.HandleSelectionNotify internally invokes SelectionContentReceived (event we subscribe) 
+                            // This event copies content to buffer[id_buf] and forwards to network if connected
 
-                            Globals.BuffersManager.CopyToBuffer(1);
-                            if (network.IsConnected)
-                                network.SendUpdateBuffer(1);
                         }
 
                         if (ev.xkey.keycode == f2_keycode)
                         {
                             clipboard.BecomeOwner(Globals.BuffersManager.GetBuf(1), "CLIPBOARD"); // Set ourselfs as owners of the selection CLIPBOARD
-                            SimulateCtrlShiftV(display);        // Simulate SelectionRequest event
+                            SimulateCtrlShiftV(display);        // Triggers SelectionRequest event
                         }
 
                         // Buffer 2
                         if (ev.xkey.keycode == f3_keycode) 
                         {
-                            if (!Globals.BuffersManager.IsDifferentContent(2)) continue; // Avoid actions if content is the same
-
-                            Globals.BuffersManager.CopyToBuffer(2);
-                            if (network.IsConnected)
-                                network.SendUpdateBuffer(2);
+                            clipboard.RequestSelectionContent(2, "PRIMARY");
                         }
 
-                        if (ev.xkey.keycode == f4_keycode) 
-                            Globals.BuffersManager.PasteFromBuffer(display, 2);
+                        if (ev.xkey.keycode == f4_keycode)
+                        {
+                            clipboard.BecomeOwner(Globals.BuffersManager.GetBuf(2), "CLIPBOARD");
+                            SimulateCtrlShiftV(display);
+                        }
 
                         break;
                     }
 
-                    case SelectionRequest: // LLegamos aca despues de hacer el SimulateCtrlShiftV
+                    case SelectionRequest:
                     {
                         XSelectionRequestEvent request = ev.xselectionrequest; // Get request
                         clipboard.HandleSelectionRequest(request);
+                        break;
+                    }
+
+                    case SelectionNotify:
+                    {
+                        XSelectionEvent selection = ev.xselection;
+                        clipboard.HandleSelectionNotify(selection);
                         break;
                     }
                 }
