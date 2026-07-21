@@ -21,7 +21,7 @@ class BuffersManager
     public void CopyToBuffer(int id_buf)
     {
         string content = this.clip.GetClipBoardContent("PRIMARY");
-        this.buffers[id_buf] = content;
+        this.SetBuf(id_buf, content);
         
     }
 
@@ -33,7 +33,7 @@ class BuffersManager
         string content = this.clip.GetClipBoardContent("CLIPBOARD");
 
         // Change content of CLIPBOARD to buffer content
-        this.clip.SetClipboardContent("CLIPBOARD", buffers[id_buf]);
+        this.clip.SetClipboardContent("CLIPBOARD", this.GetBuf(id_buf));
 
         // SimulateCtrlShiftV KeyPress
         HotkeyManager.SimulateCtrlShiftV(dpy);
@@ -42,14 +42,26 @@ class BuffersManager
         this.clip.SetClipboardContent("CLIPBOARD", content);
     }
 
+
+    public bool IsDifferentContent(int id_buf)
+    {
+        return this.clip.GetClipBoardContent("PRIMARY") != this.GetBuf(id_buf);
+    }
+
     public string GetBuf(int id_buf)
     {
-        return this.buffers[id_buf];
+        if (id_buf < 1 || id_buf > buffers.Length)
+            throw new ArgumentOutOfRangeException(nameof(id_buf));
+
+        return this.buffers[id_buf-1];
     }
 
     public void SetBuf(int id_buf, string content)
     {
-        this.buffers[id_buf] = content;
+        if (id_buf < 1 || id_buf > buffers.Length)
+        throw new ArgumentOutOfRangeException(nameof(id_buf));
+
+        this.buffers[id_buf-1] = content;
     }
 
 }

@@ -47,26 +47,33 @@ class HotkeyManager
             while (true) {
                 XNextEvent(dpy, out ev);
 
-                if (ev.type == KeyRelease) {
+                if (ev.type == KeyRelease)
+                {
+                    // Buffer 1
                     if (ev.xkey.keycode == f1_keycode) 
                     {
-                        Globals.BuffersManager.CopyToBuffer(0);
-                        if (network.IsConnected)
-                            network.SendUpdateBuffer(0);
-                    }
+                        if (!Globals.BuffersManager.IsDifferentContent(1)) continue; // Avoid actions if content is the same
 
-                    if (ev.xkey.keycode == f2_keycode) 
-                        Globals.BuffersManager.PasteFromBuffer(dpy, 0);
-
-                    if (ev.xkey.keycode == f3_keycode) 
-                    {
                         Globals.BuffersManager.CopyToBuffer(1);
                         if (network.IsConnected)
                             network.SendUpdateBuffer(1);
                     }
 
-                    if (ev.xkey.keycode == f4_keycode) 
+                    if (ev.xkey.keycode == f2_keycode) 
                         Globals.BuffersManager.PasteFromBuffer(dpy, 1);
+
+                    // Buffer 2
+                    if (ev.xkey.keycode == f3_keycode) 
+                    {
+                        if (!Globals.BuffersManager.IsDifferentContent(2)) continue; // Avoid actions if content is the same
+
+                        Globals.BuffersManager.CopyToBuffer(2);
+                        if (network.IsConnected)
+                            network.SendUpdateBuffer(2);
+                    }
+
+                    if (ev.xkey.keycode == f4_keycode) 
+                        Globals.BuffersManager.PasteFromBuffer(dpy, 2);
                 }
             }
         }
