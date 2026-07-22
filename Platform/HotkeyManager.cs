@@ -1,4 +1,5 @@
 using static X11;
+using System.Diagnostics;
 
 
 class HotkeyManager
@@ -11,6 +12,17 @@ class HotkeyManager
     static int f2_keycode;
     static int f3_keycode;
     static int f4_keycode;
+
+    private static Stopwatch autoRepeatStopwatchF2 = new Stopwatch();
+    private static bool isAutoRepeatingF2 = false;
+
+    private static Stopwatch autoRepeatStopwatchF4 = new Stopwatch();
+    private static bool isAutoRepeatingF4 = false;
+
+    public static int ignoreF2PressCount = 0;
+    public static int ignoreF2ReleaseCount = 0;
+    public static int ignoreF4PressCount = 0;
+    public static int ignoreF4ReleaseCount = 0;
 
     private static class KeyState
     {
@@ -102,8 +114,56 @@ class HotkeyManager
         try {
             // Main loop
             while (true) {
-                XNextEvent(display, out ev);
-                HandleXEvent(ev);
+                if (XPending(display) > 0)
+                {
+                    XNextEvent(display, out ev);
+                    HandleXEvent(ev);
+                }
+                else
+                {
+                    if (isAutoRepeatingF2)
+                    {
+                        bool f2Down = IsPhysicalKeyDown(display, f2_keycode);
+                        // We use a 150ms buffer to allow physical key state to settle or fake release to not break us immediately
+                        if (!f2Down && autoRepeatStopwatchF2.ElapsedMilliseconds > 150)
+                        {
+                            isAutoRepeatingF2 = false;
+                            Console.WriteLine("Auto-repeat F2 STOPPED.");
+                            autoRepeatStopwatchF2.Stop();
+                        }
+                        else if (f2Down && autoRepeatStopwatchF2.ElapsedMilliseconds > 150) // 150ms auto-repeat delay (faster)
+                        {
+                            if (!clipboard.IsPasting) 
+                            {
+                                Console.WriteLine("Auto-repeat F2 TRIGGER!");
+                                clipboard.BeginPasteBufferContent(1);
+                                autoRepeatStopwatchF2.Restart();
+                            }
+                        }
+                    }
+
+                    if (isAutoRepeatingF4)
+                    {
+                        bool f4Down = IsPhysicalKeyDown(display, f4_keycode);
+                        if (!f4Down && autoRepeatStopwatchF4.ElapsedMilliseconds > 150)
+                        {
+                            isAutoRepeatingF4 = false;
+                            Console.WriteLine("Auto-repeat F4 STOPPED.");
+                            autoRepeatStopwatchF4.Stop();
+                        }
+                        else if (f4Down && autoRepeatStopwatchF4.ElapsedMilliseconds > 150)
+                        {
+                            if (!clipboard.IsPasting) 
+                            {
+                                Console.WriteLine("Auto-repeat F4 TRIGGER!");
+                                clipboard.BeginPasteBufferContent(2);
+                                autoRepeatStopwatchF4.Restart();
+                            }
+                        }
+                    }
+
+                    System.Threading.Thread.Sleep(10);
+                }
             }
         }
         catch (Exception ex) {
@@ -139,9 +199,22 @@ class HotkeyManager
 
                 if (ev.xkey.keycode == f2_keycode)
                 {
+                    if (ignoreF2PressCount > 0)
+                    {
+                        ignoreF2PressCount--;
+                        return; // Ignore fake press
+                    }
+                    if (clipboard.IsPasting) return;
+                    
+                    // Prevent overlapping pastes from X11 auto-repeat if it kicks in
+                    if (isAutoRepeatingF2 && autoRepeatStopwatchF2.ElapsedMilliseconds < 120)
+                        return;
+
                     // Begin pasting of buffer content
                     Console.WriteLine("F2 ACTION");
                     clipboard.BeginPasteBufferContent(1);
+                    isAutoRepeatingF2 = true;
+                    autoRepeatStopwatchF2.Restart();
                     // It requests CLIPBOARD content for backup which triggers a SelectionNotify event
                     // Then it simulates CTRL+SHIFT+V for pasting
                     // After a timeout it restores CLIPBOARD content
@@ -157,8 +230,20 @@ class HotkeyManager
 
                 if (ev.xkey.keycode == f4_keycode)
                 {
+                    if (ignoreF4PressCount > 0)
+                    {
+                        ignoreF4PressCount--;
+                        return; 
+                    }
+                    if (clipboard.IsPasting) return;
+                    
+                    if (isAutoRepeatingF4 && autoRepeatStopwatchF4.ElapsedMilliseconds < 120)
+                        return;
+
                     Console.WriteLine("F4 ACTION");
                     clipboard.BeginPasteBufferContent(2);
+                    isAutoRepeatingF4 = true;
+                    autoRepeatStopwatchF4.Restart();
                 }
 
                 break;
@@ -166,6 +251,16 @@ class HotkeyManager
 
             case KeyRelease:
             {
+                if (ev.xkey.keycode == f2_keycode && ignoreF2ReleaseCount > 0)
+                {
+                    ignoreF2ReleaseCount--;
+                    return; // Ignore fake release
+                }
+                if (ev.xkey.keycode == f4_keycode && ignoreF4ReleaseCount > 0)
+                {
+                    ignoreF4ReleaseCount--;
+                    return; 
+                }
                 UpdateKeyState(ev.xkey, false);
                 break;
             }
@@ -191,22 +286,37 @@ class HotkeyManager
     {
         if (key.keycode == f1_keycode)
             KeyState.f1Down = isPressed;
-        if (key.keycode == f2_keycode)
-            KeyState.f2Down = isPressed;
-        if (key.keycode == f3_keycode)
+        if (key.keycode == f2_keycode) 
+            KeyState.f2Down = isPressed; 
+        if (key.keycode == f3_keycode) 
             KeyState.f3Down = isPressed;
-        if (key.keycode == f4_keycode)
-            KeyState.f4Down = isPressed;
+        if (key.keycode == f4_keycode) 
+            KeyState.f4Down = isPressed; 
+    }
+
+
+    public static bool IsPhysicalKeyDown(IntPtr display, int keycode)
+    {
+        byte[] keys = new byte[32];
+        X11.XQueryKeymap(display, keys);
+        return (keys[keycode / 8] & (1 << (keycode % 8))) != 0;
     }
 
     // Simulates key strokes for pasting
-    public static void SimulateCtrlShiftV(IntPtr display)
+    public static void SimulateCtrlShiftV(IntPtr display, byte bufferId)
     { 
         uint ctrl  = (uint)XKeysymToKeycode(display, XK_Control_L);
         uint shift = (uint)XKeysymToKeycode(display, XK_Shift_L);
         uint v     = (uint)XKeysymToKeycode(display, XK_V);
         
-        XTestFakeKeyEvent(display, (uint)f2_keycode, false, 0); // Toca hacer esto para que el paste funcione
+        int source_keycode = (bufferId == 1) ? f2_keycode : f4_keycode;
+        bool wasKeyDown = IsPhysicalKeyDown(display, source_keycode);
+
+        if (wasKeyDown)
+        {
+            if (source_keycode == f2_keycode) ignoreF2ReleaseCount++;
+            XTestFakeKeyEvent(display, (uint)source_keycode, false, 0); // Toca hacer esto para que el paste funcione
+        }
 
         XTestFakeKeyEvent(display, ctrl, true, 0);   // Ctrl Down
         XTestFakeKeyEvent(display, shift, true, 0);  // Shift Down
@@ -216,7 +326,12 @@ class HotkeyManager
         XTestFakeKeyEvent(display, shift, false, 0); // Shift Up
         XTestFakeKeyEvent(display, ctrl, false, 0);  // Ctrl Up
 
-        // XTestFakeKeyEvent(display, (uint)f2_keycode, true, 0); // Activar esto haria funcionar pero generaria un bucle infinito
+        if (wasKeyDown)
+        {
+            if (source_keycode == f2_keycode) ignoreF2PressCount++;
+            XTestFakeKeyEvent(display, (uint)source_keycode, true, 0); // Restauramos F2 para no perder el estado
+        }
+
         XFlush(display);
     }
 

@@ -21,6 +21,8 @@ public class ClipboardManager
     private bool pendingPaste = false;
     private byte pendingPasteBufferId;
 
+    public bool IsPasting => pendingPaste;
+
 
 
     public ClipboardManager(IntPtr display)
@@ -165,7 +167,7 @@ public class ClipboardManager
         
         // Own clipboard selection to temporarily change its content
         BecomeOwner(Globals.BuffersManager.GetBuf(this.pendingPasteBufferId), "CLIPBOARD");
-        HotkeyManager.SimulateCtrlShiftV(display); // Simulate Ctrl+shift+v
+        HotkeyManager.SimulateCtrlShiftV(display, this.pendingPasteBufferId); // Simulate Ctrl+shift+v
 
         this.WaitAndRestoreClipboard(clipboardContentBackup);
 
@@ -174,8 +176,8 @@ public class ClipboardManager
     // Clients keeps sending events so we can't just restore clipboard immediately, so we use a lil wait
     private void WaitAndRestoreClipboard(string backupContent)
     {
-        const int quietMs = 30;    // No events activity for this time, we assume client stopped sending events and can now restore clipboard
-        const int hardCapMs = 400; // Max waiting
+        const int quietMs = 15;    // No events activity for this time, we assume client stopped sending events and can now restore clipboard
+        const int hardCapMs = 250; // Max waiting
 
         var overall = Stopwatch.StartNew();
         var sinceLastServe = Stopwatch.StartNew();

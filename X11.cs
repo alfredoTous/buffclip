@@ -231,4 +231,7 @@ public static extern int XGetWindowProperty(
         bool is_press,
         ulong delay);
     
+    [DllImport("libX11.so.6")]
+    public static extern void XQueryKeymap(IntPtr display, [System.Runtime.InteropServices.Out] byte[] keys);
+
 }
