@@ -14,7 +14,11 @@ abstract class NetworkManager
     public virtual void SendUpdateBuffer(byte id_buf) {
         Console.WriteLine("[+] Enviando paquete");
         Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, id_buf, Globals.BuffersManager.GetBuf(id_buf));
-        SendPacket(packet);
+        try {
+            SendPacket(packet);
+        } catch (Exception ex) {
+            Console.WriteLine($"[-] Failed to send update: {ex.Message}");
+        }
     }
 
     protected void SendPacket(Packet packet)

@@ -140,21 +140,34 @@ public class ClipboardManager
                     {
                         XConvertSelection(this.display, selection.selection, this.negotiatedTarget, selection.selection, this.window, CurrentTime);
                     }
+                    else if (this.pendingPaste)
+                    {
+                        // No valid text targets found, proceed with empty backup
+                        this.FinishPasteBufferContent("");
+                    }
                 } 
                 else if (selection.target == this.negotiatedTarget) // Got data
                 {
                     string? decodedData = Marshal.PtrToStringUTF8(data, count.ToInt32());
                     if (selection.selection == this.atomPrimary)
-                        this.PrimaryContentReceived?.Invoke(pendingBufferId, decodedData!); // Trigger event that changes buffer content and forwards network packets
+                        this.PrimaryContentReceived?.Invoke(pendingBufferId, decodedData ?? ""); // Trigger event that changes buffer content and forwards network packets
                     if (selection.selection == this.atomClipboard && this.pendingPaste == true)
                     {
-                        this.FinishPasteBufferContent(decodedData!);
+                        this.FinishPasteBufferContent(decodedData ?? "");
                     }
                 }
             }
             finally
             {
                 if (data != IntPtr.Zero) XFree(data);
+            }
+        }
+        else
+        {
+            if (this.pendingPaste)
+            {
+                // Clipboard empty or missing. Proceed with empty backup.
+                this.FinishPasteBufferContent("");
             }
         }
     }
@@ -182,7 +195,7 @@ public class ClipboardManager
     // Clients keeps sending events so we can't just restore clipboard immediately, so we use a lil wait
     private void WaitAndRestoreClipboard(string backupContent)
     {
-        const int quietMs = 15;    // No events activity for this time, we assume client stopped sending events and can now restore clipboard
+        const int quietMs = 30;    // No events activity for this time, we assume client stopped sending events and can now restore clipboard
         const int hardCapMs = 250; // Max waiting
 
         var overall = Stopwatch.StartNew();

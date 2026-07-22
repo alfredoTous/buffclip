@@ -138,7 +138,7 @@ class BuffclipServer : NetworkManager
         Console.WriteLine($"Recibida la FullSyncRequest de cliente {conn.node_id}, preparando paquetes...");
         
         for (byte idx = 0; idx < Globals.BuffersManager.NumberOfBuffers; idx++) {
-            Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, idx, Globals.BuffersManager.buffers[idx]);
+            Packet packet = new Packet(this.node_id, Opcode.UpdateBuffer, (byte)(idx + 1), Globals.BuffersManager.buffers[idx]);
             conn.SendPacket(packet);
         }
         Console.WriteLine("Paquetes enviados");
@@ -158,7 +158,11 @@ class BuffclipServer : NetworkManager
         Console.WriteLine($"[i] Broadcasting buffer {id_buf} update to {clientsCopy.Count} clients.");
         foreach (var clientConn in clientsCopy) {
             Console.WriteLine($"[i] Sending update to client {clientConn.node_id}...");
-            clientConn.SendPacket(packet);
+            try {
+                clientConn.SendPacket(packet);
+            } catch (Exception ex) {
+                Console.WriteLine($"[-] Error sending to client {clientConn.node_id}: {ex.Message}");
+            }
         }
     }
 
