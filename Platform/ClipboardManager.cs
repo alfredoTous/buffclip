@@ -99,7 +99,7 @@ public class ClipboardManager
             int actualFormat;
             IntPtr count;
             IntPtr bytesAfter;
-            IntPtr data;
+            IntPtr data = IntPtr.Zero;
 
             XGetWindowProperty(
                 display,
@@ -116,40 +116,46 @@ public class ClipboardManager
                 out data
             );
             
-            if (selection.target == this.atomTargets) // Ask for targets
+            try
             {
-                IntPtr[] list = new IntPtr[count.ToInt32()];
-                Marshal.Copy(data, list, 0, list.Length);
+                if (selection.target == this.atomTargets) // Ask for targets
+                {
+                    IntPtr[] list = new IntPtr[count.ToInt32()];
+                    Marshal.Copy(data, list, 0, list.Length);
 
-                for (int i = 0; i < list.Length; i++)
-                {
-                    if (list[i] == XA_STRING)
+                    for (int i = 0; i < list.Length; i++)
                     {
-                        this.negotiatedTarget = XA_STRING;
+                        if (list[i] == XA_STRING)
+                        {
+                            this.negotiatedTarget = XA_STRING;
+                        }
+                        else if (list[i] == atomUTF8)
+                        {
+                            this.negotiatedTarget = atomUTF8;
+                            break;
+                        }
                     }
-                    else if (list[i] == atomUTF8)
-                    {
-                        this.negotiatedTarget = atomUTF8;
-                        break;
-                    }
-                }
 
-                if (this.negotiatedTarget != IntPtr.Zero)
+                    if (this.negotiatedTarget != IntPtr.Zero)
+                    {
+                        XConvertSelection(this.display, selection.selection, this.negotiatedTarget, selection.selection, this.window, CurrentTime);
+                    }
+                } 
+                else if (selection.target == this.negotiatedTarget) // Got data
                 {
-                    XConvertSelection(this.display, selection.selection, this.negotiatedTarget, selection.selection, this.window, CurrentTime);
-                }
-            } 
-            else if (selection.target == this.negotiatedTarget) // Got data
-            {
-                string? decodedData = Marshal.PtrToStringUTF8(data, count.ToInt32());
-                if (selection.selection == this.atomPrimary)
-                    this.PrimaryContentReceived?.Invoke(pendingBufferId, decodedData!); // Trigger event that changes buffer content and forwards network packets
-                if (selection.selection == this.atomClipboard && this.pendingPaste == true)
-                {
-                    this.FinishPasteBufferContent(decodedData!);
+                    string? decodedData = Marshal.PtrToStringUTF8(data, count.ToInt32());
+                    if (selection.selection == this.atomPrimary)
+                        this.PrimaryContentReceived?.Invoke(pendingBufferId, decodedData!); // Trigger event that changes buffer content and forwards network packets
+                    if (selection.selection == this.atomClipboard && this.pendingPaste == true)
+                    {
+                        this.FinishPasteBufferContent(decodedData!);
+                    }
                 }
             }
-            if (data != IntPtr.Zero) XFree(data);
+            finally
+            {
+                if (data != IntPtr.Zero) XFree(data);
+            }
         }
     }
 
